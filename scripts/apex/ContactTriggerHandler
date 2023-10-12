@@ -1,0 +1,37 @@
+public class ContactTriggerHandler {
+    public static void handleContactChange(List<Contact> newContacts, Map<Id, Contact> oldContactsMap) {
+        List<Account> accountsToUpdate = new List<Account>();
+
+        for (Contact updatedContact : newContacts) {
+            Contact oldContact = oldContactsMap.get(updatedContact.Id);
+
+            if (updatedContact.ContactType__c == 'Customer' && (oldContact == null || oldContact.ContactType__c != 'Customer')) {
+                Account relatedAccount = getRelatedAccount(updatedContact.AccountId);
+
+                if (relatedAccount != null) {
+                    relatedAccount.HasCustomer__c = true;
+                    accountsToUpdate.add(relatedAccount);
+                }
+            } else if (oldContact != null && oldContact.ContactType__c == 'Customer' && updatedContact.ContactType__c != 'Customer') {
+                Account relatedAccount = getRelatedAccount(updatedContact.AccountId);
+
+                if (relatedAccount != null) {
+                    relatedAccount.HasCustomer__c = false;
+                    accountsToUpdate.add(relatedAccount);
+                }
+            }
+        }
+
+        if (!accountsToUpdate.isEmpty()) {
+            update accountsToUpdate;
+        }
+    }
+
+    private static Account getRelatedAccount(Id accountId) {
+        if (accountId == null) {
+            return null;
+        }
+
+        return [SELECT Id, HasCustomer__c FROM Account WHERE Id = :accountId LIMIT 1];
+    }
+}
